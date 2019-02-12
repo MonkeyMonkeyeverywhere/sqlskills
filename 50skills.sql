@@ -96,3 +96,54 @@ delete from tblscore where score BETWEEN 79 AND 80
 
 INSERT INTO tblscore (StuId,courseId,score) 
 select DISTINCT StuId,'003',(select AVG(score) from tblscore where courseid = '002' ) from tblscore where StuId NOT in (select StuId from tblscore where courseId = '003')
+
+-- 17、按平均成绩从高到低显示所有学生的“数据库”、“企业管理”、“英语”三门的课程成绩，按如下形式显示： 学生ID,,数据库,企业管理,英语,有效课程数,有效平均分
+
+select StuId,stuName ,
+(select score from tblscore sc INNER JOIN tblcourse co  on sc.courseid = co.courseid where co.courseName = '数据库' AND sc.stuid = st.stuid) AS '数据库',
+(select score from tblscore sc INNER JOIN tblcourse co  on sc.courseid = co.courseid where co.courseName = '企业管理' AND sc.stuid = st.stuid) AS '企业管理',
+(select score from tblscore sc INNER JOIN tblcourse co  on sc.courseid = co.courseid where co.courseName = '英语' AND sc.stuid = st.stuid) AS '英语',
+(select avg(score) from tblscore sc where sc.stuid = st.stuid) AS 有效平均分
+from tblstudent st
+ORDER BY 有效平均分 DESC
+
+Select StuId
+  ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='数据库' And sc.StuID=st.StuId) 数据库
+  ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='企业管理' And sc.StuID=st.StuId) 企业管理
+  ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='英语' And sc.StuID=st.StuId) 语
+  ,(Select Count(Score) From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where (CourseName='数据库' or CourseName='企业管理' or CourseName='英语') And sc.StuID=st.StuId) 有效课程数
+  ,(Select Avg(Score) From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where (CourseName='数据库' or CourseName='企业管理' or CourseName='英语') And sc.StuID=st.StuId) 有效平均分
+  From tblStudent st
+  Order by 有效平均分 Desc
+
+
+
+--18、查询各科成绩最高和最低的分：以如下形式显示：课程ID，最高分，最低分 
+
+select CourseId,MAX(Score) 最高分,MIN(Score) 最低分 
+from tblscore GROUP BY CourseId
+
+ Select CourseId as 课程ID, (Select Max(Score) From tblScore sc Where sc.CourseId=cs.CourseId ) 最高分,
+  (Select Min(Score) From tblScore sc Where sc.CourseId=cs.CourseId ) 最低分
+  From tblCourse cs
+
+
+--19、按各科平均成绩从低到高和及格率的百分数从高到低顺序 (百分数后如何格式化为两位小数??)
+
+select CourseId,
+(Select Avg(Score) From tblScore sc Where sc.CourseId=cs.CourseId ) 平均分,
+CONCAT(ROUND((select COUNT(b.StuId) from tblscore b where b.CourseId = cs.CourseId AND b.score >= 60)/(select COUNT(c.StuId) from tblscore c WHERE c.CourseId = cs.CourseId)*100,2),'%') 及格率
+from tblscore cs
+
+
+--查询如下课程平均成绩和及格率的百分数(用"1行"显示): 企业管理（001），马克思（002），OO&UML （003），数据库（004） 
+
+Select sc.CourseId 课程ID,cs.CourseName 课程名称,Avg(Score) 平均成绩,
+	CONCAT(ROUND(((Select Count(Score) From tblScore Where CourseId=sc.CourseId And Score>=60)*10000/Count(Score))/100.0,2),'%') 及格率 
+  From tblScore sc
+  Inner Join tblCourse cs ON sc.CourseId=cs.CourseId
+  Where sc.CourseId like '00%'
+  Group By sc.CourseId,cs.CourseName
+
+
+
