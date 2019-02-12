@@ -1,5 +1,42 @@
--- 9、查询所有课程成绩小于60分的同学的学号、姓名；
+-- 2、查询平均成绩大于60分的同学的学号和平均成绩；
+select stuId,avg(score) from tblscore GROUP BY StuId HAVING avg(score) > 60
 
+-- 3、查询所有同学的学号、姓名、选课数、总成绩； 
+select 
+StuId,
+stuName,
+(select COUNT(1) FROM tblscore t2 where t2.StuId = t1.stuId ) as '选课数',
+(select sum(score) from tblscore t3 where t3.StuId = t1.stuId) as '总成绩'
+ FROM tblstudent t1
+
+-- 4、查询姓“李”的老师的个数；
+select count(teaId) from tblteacher where teaName like '李%'
+
+-- 5、查询没学过“叶平”老师课的同学的学号、姓名；
+SELECT StuId,stuName from tblstudent where StuId NOT in (
+select StuId from tblscore where CourseId in 
+(select a.CourseId from tblcourse a INNER JOIN tblteacher b on a.teaId = b.teaId  where b.teaName = '叶平')
+)
+
+-- 6、查询学过“001”并且也学过编号“002”课程的同学的学号、姓名；
+
+select StuId,stuName from tblstudent a where 
+EXISTS (select StuId from tblscore where CourseId = '001' AND StuId = a.stuId )
+AND EXISTS (select StuId from tblscore where CourseId = '002' AND StuId = a.stuId ) 
+
+
+Select StuId,StuName From tblStudent st
+  Where (Select Count(*) From tblScore s1 Where s1.StuId=st.StuId And s1.CourseId='001')>0
+   And
+   (Select Count(*) From tblScore s2 Where s2.StuId=st.StuId And s2.CourseId='002')>0
+
+
+-- 7、查询学过“叶平”老师所教的所有课的同学的学号、姓名；
+
+select StuId,stuName from tblstudent st where NOT EXISTS(
+select * from tblcourse a INNER JOIN tblteacher b on a.teaId = b.teaId WHERE b.teaName = '叶平' and CourseId not in (select CourseId from tblscore where StuId = st.stuId)
+)
+-- 9、查询所有课程成绩小于60分的同学的学号、姓名；
 select stuid,stuname from tblstudent a where StuId not in 
 (
 		select StuId from tblscore where StuId = a.StuId and score > 60 
