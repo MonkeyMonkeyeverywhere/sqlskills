@@ -136,14 +136,102 @@ CONCAT(ROUND((select COUNT(b.StuId) from tblscore b where b.CourseId = cs.Course
 from tblscore cs
 
 
---查询如下课程平均成绩和及格率的百分数(用"1行"显示): 企业管理（001），马克思（002），OO&UML （003），数据库（004） 
+--20查询如下课程平均成绩和及格率的百分数(用"1行"显示): 企业管理（001），马克思（002），OO&UML （003），数据库（004） 
 
 Select sc.CourseId 课程ID,cs.CourseName 课程名称,Avg(Score) 平均成绩,
 	CONCAT(ROUND(((Select Count(Score) From tblScore Where CourseId=sc.CourseId And Score>=60)*10000/Count(Score))/100.0,2),'%') 及格率 
   From tblScore sc
   Inner Join tblCourse cs ON sc.CourseId=cs.CourseId
-  Where sc.CourseId like '00%'
+  Where sc.CourseId like '00[1234]'
   Group By sc.CourseId,cs.CourseName
 
+--21、查询不同老师所教不同课程平均分从高到低显示
+
+select
+ c.teaid,c.teaname,b.coursename,avg(score) 平均分
+FROM tblscore a 
+INNER JOIN tblcourse b on a.courseid = b.courseid
+INNER JOIN tblteacher c on b.teaid = c.teaid
+GROUP BY c.teaid,c.teaName,b.coursename
+ORDER BY 平均分 DESC
+
+ Select CourseId 课程ID,CourseName 课程名称,TeaName 授课教师,(Select Avg(Score) From tblScore Where CourseId=cs.CourseId) 平均成绩
+  From tblCourse cs
+  Inner Join tblTeacher tc ON cs.TeaId=tc.TeaId
+  Order by 平均成绩 Desc
 
 
+
+--22、查询如下课程成绩第 3 名到第 6 名的学生成绩单：企业管理（001），马克思（002），UML （003），数据库（004） 格式：[学生ID],[学生姓名],企业管理,马克思,UML,数据库,平均成绩
+
+select temp.stuid,st.stuname
+from
+(
+(select stuid,cu.coursename,score from tblscore sc INNER JOIN tblcourse cu on sc.courseid = cu.courseid where cu.coursename = '企业管理' LIMIT 2,3)
+UNION 
+(select stuid,cu.coursename,score from tblscore sc INNER JOIN tblcourse cu on sc.courseid = cu.courseid where cu.coursename = '马克思' LIMIT 2,3)
+UNION
+(select stuid,cu.coursename,score from tblscore sc INNER JOIN tblcourse cu on sc.courseid = cu.courseid where cu.coursename = 'UML' LIMIT 2,3)
+UNION
+(select stuid,cu.coursename,score from tblscore sc INNER JOIN tblcourse cu on sc.courseid = cu.courseid where cu.coursename = '数据库' LIMIT 2,3)
+) as temp INNER JOIN tblstudent st on temp.stuid = st.stuid
+^^^^^^^^^^^^^未能实现要求
+
+Select * From 
+  (
+   Select Top 6 StuId 学生ID,StuName 学生姓名
+    ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='企业管理' And sc.StuID=st.StuId) 企业管理
+    ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='马克思' And sc.StuID=st.StuId) 马克思
+    ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='UML' And sc.StuID=st.StuId) UML
+    ,(Select Score From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where CourseName='数据库' And sc.StuID=st.StuId) 数据库
+    ,(Select Avg(Score) From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where (CourseName='数据库' or CourseName='企业管理' or CourseName='UML'or CourseName='马克思') And sc.StuID=st.StuId) 平均成绩
+    ,Row_Number() Over(Order by(Select Avg(Score) From tblScore sc Inner Join tblCourse cs On sc.CourseId=cs.CourseId Where (CourseName='数据库' or CourseName='企业管理' or CourseName='UML'or CourseName='马克思') And sc.StuID=st.StuId) DESC) 排名
+    From tblStudent st
+    Order by 排名
+  ) as tmp
+  Where 排名 between 3 And 6
+
+
+--23、统计列印各科成绩,各分数段人数:课程ID,课程名称,[100-85],[85-70],[70-60],[ <60] 
+
+select courseid 课程ID,coursename 课程名称,
+ (select COUNT(*) from tblscore where courseid = cs.courseid and score BETWEEN 85 AND 100) AS '[100-85]',
+ (select COUNT(*) from tblscore where courseid = cs.courseid and score BETWEEN 70 AND 85) AS '[85-70]',
+ (select COUNT(*) from tblscore where courseid = cs.courseid and score BETWEEN 60 AND 70) AS '[70-60]',
+ (select COUNT(*) from tblscore where courseid = cs.courseid and score BETWEEN 0 AND 60) AS '[<60]'
+from tblcourse cs
+
+--24、查询学生平均成绩及其名次 
+
+select stuid,avg(score) avgscore from tblscore GROUP BY stuid
+^^^^排名
+
+
+--25、查询各科成绩前三名的记录:(不考虑成绩并列情况)
+
+
+--26、查询每门课程被选修的学生数 
+
+select coursename,
+ (select COUNT(*) from tblscore where courseid = cs.courseid) 选修人数
+from tblcourse cs
+
+
+--27、查询出只选修了一门课程的全部学生的学号和姓名 
+
+select stuid,stuname from tblstudent st where 
+(select COUNT(*) from tblscore where stuid = st.stuid) = 1
+ 
+--28、查询男生、女生人数 
+select 
+(select COUNT(*) from tblstudent where stusex = '男') 男生人数,
+(select COUNT(*) from tblstudent where stusex = '女') 女生人数
+
+--29、查询姓“张”的学生名单 
+
+select * from tblstudent where stuname like '张%'
+
+
+--30、查询同名同性学生名单，并统计同名人数 
+ Select Distinct StuName 学生姓名,(Select Count(*) From tblStudent s2 Where s2.StuName=st.StuName) 同名人数 From tblStudent st
+  Where (Select Count(*) From tblStudent s2 Where s2.StuName=st.StuName)>=2
