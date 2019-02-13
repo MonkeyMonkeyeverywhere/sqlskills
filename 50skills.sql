@@ -235,3 +235,143 @@ select * from tblstudent where stuname like '张%'
 --30、查询同名同性学生名单，并统计同名人数 
  Select Distinct StuName 学生姓名,(Select Count(*) From tblStudent s2 Where s2.StuName=st.StuName) 同名人数 From tblStudent st
   Where (Select Count(*) From tblStudent s2 Where s2.StuName=st.StuName)>=2
+
+
+--32、查询每门课程的平均成绩，结果按平均成绩升序排列，平均成绩相同时，按课程号降序排列 
+
+select coursename,
+(select avg(score) from tblscore where courseid = cs.courseid) 平均成绩
+from tblcourse cs 
+ORDER BY 平均成绩 ASC,courseid DESC
+
+--33、查询平均成绩大于85的所有学生的学号、姓名和平均成绩 
+
+select stuid,stuname,(select avg(score) from tblscore where stuid = st.stuid) 平均成绩 from tblstudent st where 平均成绩 > 85 --不行
+
+
+select stuid,stuname from tblstudent st where (select avg(score) from tblscore where stuid = st.stuid) > 85  --不行
+
+   --呃呃呃就是子查询两次啊，，太low了吧
+Select StuId 学号,StuName 姓名,(Select Avg(Score) From tblScore Where StuId=st.StuId) 平均成绩 From tblStudent st
+  Where (Select Avg(Score) From tblScore Where StuId=st.StuId)>85
+
+
+--34、查询课程名称为“数据库”，且分数低于60的学生姓名和分数 
+  
+--垃圾方法
+select stuname ,
+(select score from tblscore sr INNER JOIN tblcourse cr on sr.courseid = cr.courseid where stuid = st.stuid and cr.coursename = '数据库') 数据库
+from tblstudent st 
+where (select score from tblscore sr INNER JOIN tblcourse cr on sr.courseid = cr.courseid where stuid = st.stuid and cr.coursename = '数据库')<60
+
+ Select StuName 姓名,Score 分数 From tblScore sc
+  Inner Join tblStudent st On sc.StuId=st.StuId
+  Inner Join tblCourse cs On sc.CourseId=cs.CourseId
+  Where CourseName='数据库' And Score<60
+
+--35、查询所有学生的选课情况； 
+EXPLAIN
+ Select StuId 学号,(Select count(DISTINCT courseid) From tblScore Where StuId=st.StuId) 选课数
+  From tblStudent st
+
+-- （上面的）扩展：每人选了多少门课
+EXPLAIN
+select a.StuName,COUNT(b.stuId) from tblstudent a left JOIN tblscore b on a.StuId = b.stuid 
+GROUP BY a.StuId
+
+
+--36、查询任何一门课程成绩在70分以上的姓名、课程名称和分数； 
+select 
+st.stuname,c.coursename,sc.score
+from tblscore sc INNER JOIN tblstudent st on sc.stuid = st.stuid 
+INNER JOIN tblcourse c on sc.courseid = c.courseid
+where sc.score > 70
+
+
+--38、查询课程编号为003且课程成绩在80分以上的学生的学号和姓名；
+EXPLAIN
+select stuid,stuname from tblstudent where stuid in (select DISTINCT stuid from tblscore where courseid = '003' and score > 80)
+
+
+--40、查询选修“叶平”老师所授课程的学生中，成绩最高的学生姓名及其成绩 
+EXPLAIN
+Select CourseId,CourseName
+ ,(Select StuName From tblStudent Where StuId in (Select StuID From tblScore Where CourseId=cs.CourseId Order by Score Desc) limit 1) 该科最高学生
+ ,(Select Score From tblScore Where CourseId=cs.CourseId Order by Score Desc limit 1) 成绩
+ From tblCourse cs Inner Join tblTeacher tc ON cs.TeaId=tc.TeaId
+ Where TeaName='叶平'
+
+
+--41、查询各个课程及相应的选修人数 
+
+select 
+coursename,
+(select count(stuid) from tblscore where courseid = cs.courseid) 选修人数
+from tblcourse cs 
+
+
+--42、查询不同课程成绩相同的 学生的学号、课程号、学生成绩 
+ Select StuId 学号, CourseId 课程号, Score 成绩 From tblScore sc 
+  Where Exists (Select * From tblScore Where Score=sc.Score And StuId=sc.StuId And CourseId <>sc.CourseId)
+  Order by 学号,成绩
+
+--43、查询每门功成绩最好的前两名 
+
+select
+coursename, 
+(select stuid from tblscore where courseid = cs.courseid ORDER BY score desc LIMIT 1) 第一名,
+(select stuid from tblscore where courseid = cs.courseid ORDER BY score desc LIMIT 1,1) 第二名
+from tblcourse cs 
+
+
+--44、统计每门课程的学生选修人数（超过10人的课程才统计）。要求输出课程号和选修人数，查询结果按人数降序排列，若人数相同，按课程号升序排列  
+
+Select CourseId 课程ID,(Select count(Distinct StuId) From tblScore Where CourseId=cs.CourseId) 选修人数
+  From tblCourse cs 
+  Where (Select count(Distinct StuId) From tblScore Where CourseId=cs.CourseId)>=10
+  Order by 选修人数 DESC, 课程ID  
+
+
+--45、检索至少选修两门课程的学生学号 
+
+select 
+stuid
+from tblscore GROUP BY stuid
+HAVING COUNT(courseid) > 1   --没有重复选课
+
+
+--有重复课程时用此方法(如补考)
+
+select 
+stuid
+from tblscore GROUP BY stuid
+HAVING COUNT(DISTINCT courseid) > 1
+
+
+--46、查询全部学生都选修的课程的课程号和课程名 
+select 
+courseid,coursename
+from tblcourse cs
+where not EXISTS --没学过本课程的学生是否存在
+(select stuid from tblstudent where stuid not in (select stuid from tblscore where courseid = cs.courseid) )
+
+--48、查询两门以上不及格课程的同学的学号及其平均成绩 
+
+Select StuID as 学号,Avg(Score) as 平均成绩 
+From tblScore sc
+  Where (Select Count(*) From tblScore s1 Where s1.StuId=sc.StuId And Score<60)>=2
+  Group By StuId
+
+--49、检索“004”课程分数小于60，按分数降序排列的同学学号 (ok)
+
+
+select 
+stuid
+from tblscore where courseid = '004' and score < 60
+ORDER BY score DESC
+
+
+
+
+
+
